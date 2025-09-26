@@ -20,21 +20,31 @@ st.title("📊 Instagram Analytics Dashboard")
 # --- Sidebar Controls ---
 with st.sidebar:
     st.header("Upload & Settings")
-    uploaded = st.file_uploader("Upload Excel export (.xlsx)", type=["xlsx"], key="uploader_sidebar")
+    uploaded_sidebar = st.file_uploader("Upload Excel export (.xlsx)", type=["xlsx"], key="uploader_sidebar")
     tz = st.selectbox("Timezone", ["Europe/London", "UTC", "America/New_York", "Europe/Berlin", "Asia/Dubai"], index=0)
     start_date = st.date_input("Start date for 90-day calendar (optional)")
-    gen_calendar = st.checkbox("Generate 90-day calendar", value=True)
-    run_btn = st.button("Run Analysis")
+    gen_calendar = st.checkbox("Generate 90-day calendar", value=True,
+                               help="If no date is selected, the calendar step will be skipped (analysis still runs).")
+    run_btn_sidebar = st.button("Run Analysis (Sidebar)")
 
-# --- Main Uploader Fallback ---
-if not uploaded:
-    st.info("Please upload your Instagram Excel export (.xlsx) to begin.")
-    uploaded = st.file_uploader("Upload Excel export (.xlsx)", type=["xlsx"], key="uploader_main")
+# --- Main Uploader + BIG Button ---
+st.markdown("### Step 1: Upload your Instagram Excel export (.xlsx)")
+uploaded_main = st.file_uploader("Upload here if you prefer (same as sidebar)", type=["xlsx"], key="uploader_main")
 
-# --- Run Analysis ---
-if run_btn:
+st.markdown("### Step 2: Run the analysis")
+auto_run = st.checkbox("Auto-run as soon as a file is uploaded", value=True)
+run_btn_main = st.button("▶️ Run Analysis", type="primary", use_container_width=True)
+
+# Determine which upload to use
+uploaded = uploaded_sidebar or uploaded_main
+run_clicked = run_btn_sidebar or run_btn_main or (auto_run and uploaded is not None)
+
+if uploaded is None:
+    st.info("Please upload your .xlsx file using the sidebar or the uploader above.")
+
+if run_clicked:
     if uploaded is None:
-        st.warning("No file uploaded yet. Please upload your .xlsx file in the sidebar or above and click 'Run Analysis' again.")
+        st.warning("No file uploaded yet. Please upload your .xlsx file and try again.")
         st.stop()
 
     try:
@@ -59,7 +69,7 @@ if run_btn:
             # Posting time analysis
             hourly_engagement, heat_df, heatmap_path = posting_time_analysis(posts_df_clustered.copy(), tz_name=tz, out_dir=".")
 
-            # Calendar (optional)
+            # Calendar (optional): only if a date is provided
             cal_files = (None, None, None)
             if gen_calendar and start_date:
                 start_str = start_date.strftime("%Y-%m-%d")
@@ -141,4 +151,4 @@ if run_btn:
         st.error(f"Something went wrong: {e}")
         st.exception(e)
 else:
-    st.caption("Tip: If you don't see the upload box in the sidebar, use the main upload field above.")
+    st.caption("Tip: Use either uploader and then click the big ▶️ Run Analysis button, or enable auto-run.")
